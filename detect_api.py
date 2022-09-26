@@ -12,7 +12,7 @@ from utils.datasets import letterbox
 from utils.general import check_img_size, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
-from utils.torch_utils import select_device, time_synchronized
+from utils.torch_utils import select_device, time_synchronized, TracedModel
 
 class Detect:
     def __init__(self, weights, conf_thres, iou_thres, classes, device = "", view_img = False, save_dir=None):
@@ -22,8 +22,6 @@ class Detect:
         self.device, self.model = self.init(weights, device)
         self.stride = int(self.model.stride.max())  # model stride
         self.half = self.device.type != 'cpu'  # half precision only supported on CUDA
-        if self.half:
-            self.model.half()  # to FP16
         self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms = conf_thres, iou_thres, classes, False
         
         # Get names and colors
@@ -46,18 +44,20 @@ class Detect:
         # Load model
         model = attempt_load(weights, map_location=device)  # load FP32 model
 
-        #if trace:
-        #    model = TracedModel(model, device, opt.img_size) # bye
-
 
         return device, model
 
     def init_size(self, size):
+        # if trace:
 
-        size = check_img_size(size, s=self.stride)  # check img_size
+
+        new_size = check_img_size(size, s=self.stride)  # check img_size
+        self.model = TracedModel(self.model, self.device, size)
+        if self.half:
+            self.model.half()  # to FP16
         # Run inference
         if self.device.type != 'cpu':
-            self.model(torch.zeros(1, 3, size, size).to(self.device).type_as(next(self.model.parameters())))  # run once
+            self.model(torch.zeros(1, 3, new_size, new_size).to(self.device).type_as(next(self.model.parameters())))  # run once
 
     def get_pt_cv_data(self, img0, img_size, img_return = False):
         #print(f'image {self.count}/{self.nf} {path}: ', end='')
@@ -178,8 +178,7 @@ class Detect:
             
             # Read image
             im0s = cv2.imread(file.path)  # BGR
-            img = self.get_pt_cv_data(im0s, img_size=imgsz)
-            print(self.detect_image(img, im0s, file.path, imgsz))
+            print(self.detect_image(im0s, imgsz, file.path))
 
         print(f'Done. ({time.time() - t0:.3f}s)')
 
