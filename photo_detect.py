@@ -8,7 +8,7 @@ if __name__ == '__main__':
         if file.name.startswith("test"):
             shutil.rmtree(file.path)
             print(f"removed {file.path}")
-    weight = "runs/train/210-416-9-1000/weights/best.pt"
+    weight = "runs/train/210-416-48-1000-tiny/weights/best.pt"
     conf_thres = 0.25
     iou_thres = 0.45
     classes = None
