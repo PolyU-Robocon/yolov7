@@ -15,9 +15,10 @@ from utils.plots import plot_one_box
 from utils.torch_utils import select_device, time_synchronized, TracedModel
 
 class Detect:
-    def __init__(self, weights, conf_thres, iou_thres, classes, device = "", view_img = False, save_dir=None):
+    def __init__(self, weights, conf_thres=0.25, iou_thres=0.45, classes=None, device = "", view_img = False, save_dir=None, trace=True):
         self.weights = weights
         self.save_dir = save_dir
+        self.trace = trace
         self.save = False if self.save_dir == None else True
         self.device, self.model = self.init(weights, device)
         self.stride = int(self.model.stride.max())  # model stride
@@ -44,15 +45,14 @@ class Detect:
         # Load model
         model = attempt_load(weights, map_location=device)  # load FP32 model
 
-
         return device, model
 
     def init_size(self, size):
         # if trace:
 
-
         new_size = check_img_size(size, s=self.stride)  # check img_size
-        self.model = TracedModel(self.model, self.device, size)
+        if self.trace:
+            self.model = TracedModel(self.model, self.device, size)
         if self.half:
             self.model.half()  # to FP16
         # Run inference

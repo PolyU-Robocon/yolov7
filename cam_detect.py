@@ -7,15 +7,14 @@ cap = None
 
 def camera_start(cam):
     global cap
-    print(f"CAMERA {cam} STARTING")
     cap = cv2.VideoCapture(cam)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 2560)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1440)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
     cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
     if not cap.isOpened():
         print("Cannot open camera")
         exit()
-    print(f"CAMERA {cam} STARTED")
+    print(f"CAMERA {cam} Initialized")
 
 
 if __name__ == '__main__':
@@ -28,14 +27,14 @@ if __name__ == '__main__':
             shutil.rmtree(file.path)
             print(f"removed {file.path}")
     now = time.time()   
-    cv2.namedWindow("live", cv2.WINDOW_FULLSCREEN)
+    cv2.namedWindow("live", cv2.WINDOW_NORMAL)
 
-    weight = "runs/train/real-216-2048-300-tiny/weights/best.pt"
+    weight = "runs/train/11k-1440-300-tiny/weights/best.pt"
     conf_thres = 0.25
     iou_thres = 0.45
     classes = None
     detect = detect_api.Detect(weight, conf_thres, iou_thres, classes, view_img=True)
-    size = 1024
+    size = 736  
     detect.init_size(size)
 
     cam_thread.join()
