@@ -68,10 +68,10 @@ class PoleAim:
                 print("Can't receive frame (stream end?). Exiting ...")
                 return None
             result = self.detect.detect_image(frame, size)
-            width = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)
-            height = self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            used_time = round((time.time() - start), 5)
-            print(f"resolution: {width}x{height}detected {len(result)} object, used time: {used_time}s, fps: {round(1 / used_time, 5)}")
+            #width = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)
+            #height = self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
+            #used_time = round((time.time() - start), 5)
+            #print(f"resolution: {width}x{height}detected {len(result)} object, used time: {used_time}s, fps: {round(1 / used_time, 5)}")
             return result
 
     def aim(self, target):
@@ -83,27 +83,34 @@ class PoleAim:
         cv2.namedWindow("live", cv2.WINDOW_NORMAL)
         while True:
             self.result = self.get_frame()
-            for i in self.result:
-                if i[0] == 0:
-                    print(i[3])
-                    print(i[4])
+            #for i in self.result:
+            #    if i[0] == 0:
+            #        print(i[3])
+            #        print(i[4])
         self.cam.release()
         cv2.destroyAllWindows()
 
     def process(self, targets):
+        print(targets)
         for i in list(targets):
-            if i[5] < 0.5:
+            if i[0] == 0:
                 targets.remove(i)
         return targets
 
     def run(self):
         threading.Thread(target=self.detecting, daemon=True).start()
         while True:
-            input()
+            a = input()
             targets = self.process(self.result)
-            for i in targets:
-                if i[0] == 0:
-                    self.aim(i)
+            try:
+                a = int(a)
+                for i in targets:
+                    if i[6] == a:
+                        self.aim(i)
+            except ValueError:
+                for i in targets:
+                    if i[0] == 0:
+                        self.aim(i)
 
 
 

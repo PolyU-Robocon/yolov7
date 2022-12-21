@@ -107,6 +107,7 @@ class Detect:
         p, s, im0 = path, '', im0s
         # Process detections
         result = []
+        cnt = 1
         for i, det in enumerate(pred):  # detections per image
             if save and self.save_dir != None:
                 p = Path(p)  # to Path
@@ -127,11 +128,14 @@ class Detect:
                     cache_result = []
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                     line = (cls, *xywh, conf)
-                    
+                    if conf <= 0.3:
+                        continue
                     cache_result.append(int(line[0].item()))
                     for j in range(1, 5):
                         cache_result.append(line[j])
                     cache_result.append(line[5].item())
+                    if line[0] != 0: #injected
+                        cache_result.append(cnt)
                     #print(cache_result)
                     result.append(cache_result)
 
@@ -142,8 +146,12 @@ class Detect:
 
                     # Add bbox to image
                     if save or self.view_img:
-                        label = f'{self.names[int(cls)]} {conf:.2f}'
-                        if conf > 0.25:
+                        add = ""
+                        if line[0] != 0:#injected
+                            add = str(cnt)
+                            cnt+=1
+                        label = f'{add }{self.names[int(cls)]} {conf:.2f}'
+                        if conf > 0.3:#todo fuck out this out of api
                             plot_one_box(xyxy, im0, label=label, color=self.colors[int(cls)], line_thickness=1)
                 #print(result)
             # Print time (inference + NMS)
