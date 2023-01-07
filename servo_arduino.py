@@ -1,9 +1,10 @@
 import pyfirmata2
 
+
 class Servo:
-    def __init__(self, pin=9, offset=9):
+    def __init__(self, pin=9, offset=9, com='/dev/ttyUSB0'):
         self.offset = offset
-        self.board=pyfirmata2.Arduino('/dev/ttyUSB0')
+        self.board = pyfirmata2.Arduino(com)
         self.iter = pyfirmata2.util.Iterator(self.board)
         self.iter.start()
         self.pin = self.board.get_pin(f'd:{pin}:s')
@@ -15,7 +16,7 @@ class Servo:
         self.deg_now = max(min(self.deg_now + angle, 180), 0)
         print(self.deg_now)
         self.pin.write(self.deg_now)
-        
+
     def run(self):
         while True:
             try:
@@ -24,6 +25,7 @@ class Servo:
             except Exception:
                 print("Error input")
 
+
 if __name__ == "__main__":
-    servo = Servo()
+    servo = Servo(com="COM8")
     servo.run()
