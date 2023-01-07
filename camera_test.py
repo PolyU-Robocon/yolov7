@@ -1,22 +1,27 @@
 import cv2
 import time
 
+from webcam import Webcam
+
+
 if __name__ == '__main__':
-    cv2.namedWindow("live", cv2.WINDOW_NORMAL) 
-    cap = cv2.VideoCapture("/dev/video0", cv2.CAP_V4L2)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1920)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080)
-    print("STARTED CAM")
-    
-    
-    while cap.isOpened():
-        start = time.time()
-        ret, frame = cap.read()
-        cv2.imshow('live', frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        print(f"{cap.get(cv2.CAP_PROP_FRAME_WIDTH)}x{cap.get(cv2.CAP_PROP_FRAME_HEIGHT)} fps: {round(1 / (time.time() - start), 5)}, {cap.get(cv2.CAP_PROP_FPS)}")
+    webcam = Webcam(width=2560, height=1440)
+    webcam.cam_init()
+    webcam.start()
+    cv2.namedWindow("live", cv2.WINDOW_NORMAL)
+    start = time.time()
+    while True:
+        if not webcam.used:
+            frame = webcam.read()
+            cv2.imshow('live', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            w, h, fps = webcam.get_wh_fps()
+            print(f"{w}x{h} fps: {round(1 / (time.time() - start), 5)}, {fps}")
+            start = time.time()
+        else:
+            time.sleep(0.00001)
     print("END")
+    webcam.stop()
     cap.release()
     cv2.destroyAllWindows()

@@ -3,54 +3,44 @@ import detect_api
 import time
 import threading
 
-cap = None
+from webcam import Webcam
 
-def camera_start(cam):
-    global cap
-    cap = cv2.VideoCapture(cam)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-    cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-    if not cap.isOpened():
-        print("Cannot open camera")
-        exit()
-    print(f"CAMERA {cam} Initialized")
+webcam = Webcam(width=1920, height=1080)
+
+
+def camera_start():
+    webcam.cam_init()
 
 
 if __name__ == '__main__':
     cam = 0
-    cam_thread = threading.Thread(target=camera_start, args=(cam, ))
+    cam_thread = threading.Thread(target=camera_start)
     cam_thread.start()
-    import os, shutil
-    for file in os.scandir("./runs/detect"):
-        if file.name.startswith("test"):
-            shutil.rmtree(file.path)
-            print(f"removed {file.path}")
-    now = time.time()   
-    cv2.namedWindow("live", cv2.WINDOW_NORMAL)
+    now = time.time()
 
     weight = "runs/train/11k-1440-300-tiny/weights/best.pt"
     conf_thres = 0.25
     iou_thres = 0.45
+    size = 1024
     classes = None
     detect = detect_api.Detect(weight, conf_thres, iou_thres, classes, view_img=True)
-    size = 736  
     detect.init_size(size)
 
     cam_thread.join()
-    print(f"Initialized camrea and Yolov7 with {round((time.time() - now), 5)}s")
-
+    webcam.start()
+    print(f"Initialized camera and Yolo v7 with {round((time.time() - now), 5)}s")
+    start = time.time()
+    cv2.namedWindow("live", cv2.WINDOW_NORMAL)
     while True:
-        start = time.time()
-        ret, frame = cap.read()
-        if not ret:
-            print("Can't receive frame (stream end?). Exiting ...")
-            break
-        #print(f"init time{time.time() - start}")
-        result = detect.detect_image(frame, size)
-        width = cap.get(cv2.CAP_PROP_FRAME_WIDTH)
-        height = cap.get(cv2.CAP_PROP_FRAME_HEIGHT)
-        used_time = round((time.time() - start), 5)
-        print(f"resolution: {width}x{height}detected {len(result)} object, used time: {used_time}s, fps: {round(1 / used_time, 5)}")
-    cap.release()
+        if not webcam.used:
+            frame = webcam.read()
+            result = detect.detect_image(frame, size)
+            w, h, fps = webcam.get_wh_fps()
+            used_time = time.time() - start
+            fps_cal = round(1 / used_time, 5)
+            print(f"resolution: {w}x{h} detected {len(result)} object with {used_time}s, fps: cal {fps_cal} cam {fps}")
+            start = time.time()
+        else:
+            time.sleep(0.00001)
+    webcam.cam.release()
     cv2.destroyAllWindows()
