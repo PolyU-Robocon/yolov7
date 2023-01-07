@@ -1,32 +1,38 @@
-import cv2
-import time
 import threading
+import time
+
+import cv2
 
 from detect_api import Detect
 from servo_arduino import Servo
+from webcam import Webcam
 
-camno = 0
-weight = "runs/train/11k-1440-300-tiny/weights/best.pt"
-conf_thres = 0.25
-iou_thres = 0.45
-size = 736 #mul of 16
-arduino_pin = 9
-servo_offset = 9
-trace = False
+CAM_ID = 0
+WEIGHT = "runs/train/11k-1440-300-tiny/weights/best.pt"
+CONF_THRES = 0.25
+IOU_THRES = 0.45
+SIZE = 736  # mul of 16
+ARDUINO_PIN = 9
+SERVO_OFFSET = 9
+SERVO_COM = "/dev/ttyUSB0"
+TRACE = True
+
 
 class PoleAim:
-    def __init__(self, camno, weight, conf_thres, iou_thres, img_size, arduino_pin, servo_offset, trace):
-        self.camno = camno
+    def __init__(self, cam_id, weight, conf_thres, iou_thres, img_size, arduino_pin, servo_com, servo_offset, trace):
+        self.cam_id = cam_id
         self.weight = weight
         self.conf_thres = conf_thres
         self.iou_thres = iou_thres
         self.img_size = img_size
         self.servo_offset = servo_offset
+        self.servo_com = servo_com
         self.servo: Servo
         self.arduino_pin = arduino_pin
         self.servo_offset = servo_offset
         self.trace = trace
         self.result = []
+        self.webcam = Webcam(width=1280, height=720)
         now = time.time()
 
         cam_thread = threading.Thread(target=self.camera_init)
@@ -44,50 +50,36 @@ class PoleAim:
         print(f"Initialized with {round((time.time() - now), 5)}s")
 
     def camera_init(self):
-        print(f"CAMERA {self.camno} STARTING")
-        self.cam = cv2.VideoCapture(self.camno)
-        self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
-        self.cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*'MJPG'))
-        if not self.cam.isOpened():
-            print("Cannot open camera")
-            exit()
-        print(f"CAMERA {self.camno} STARTED")
+        self.webcam.cam_init()
 
     def servo_init(self):
-        self.servo = Servo(self.arduino_pin, self.servo_offset)
-    
+        self.servo = Servo(self.arduino_pin, self.servo_offset, self.servo_com)
+
     def detect_init(self):
         self.detect = Detect(self.weight, self.conf_thres, self.iou_thres, view_img=True, trace=self.trace)
         self.detect.init_size(self.img_size)
 
-    def get_frame(self):
-            start = time.time()
-            ret, frame = self.cam.read()
-            if not ret:
-                print("Can't receive frame (stream end?). Exiting ...")
-                return None
-            result = self.detect.detect_image(frame, size)
-            #width = self.cam.get(cv2.CAP_PROP_FRAME_WIDTH)
-            #height = self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT)
-            #used_time = round((time.time() - start), 5)
-            #print(f"resolution: {width}x{height}detected {len(result)} object, used time: {used_time}s, fps: {round(1 / used_time, 5)}")
-            return result
-
     def aim(self, target):
-        deg = (0.5 - target[1]) * 81
+        deg = (0.5 - target[1]) * 80
         self.servo.move(deg)
         print(deg)
-    
+
     def detecting(self):
+        self.webcam.start()
         cv2.namedWindow("live", cv2.WINDOW_NORMAL)
+        # start = time.time()
         while True:
-            self.result = self.get_frame()
-            #for i in self.result:
-            #    if i[0] == 0:
-            #        print(i[3])
-            #        print(i[4])
-        self.cam.release()
+            if not self.webcam.used:
+                frame = self.webcam.read()
+                self.result = self.detect.detect_image(frame, self.img_size)
+                # w, h, fps = self.webcam.get_wh_fps()
+                # used_time = time.time() - start
+                # fps_cal = round(1 / used_time, 5)
+                # print(f"resolution: {w}x{h}, detected {len(self.result)} object with {used_time}s, fps: cal {fps_cal} cam {fps}")
+                # start = time.time()
+            else:
+                time.sleep(0.00001)
+        self.webcam.cam.release()
         cv2.destroyAllWindows()
 
     def process(self, targets):
@@ -113,10 +105,10 @@ class PoleAim:
                         self.aim(i)
 
 
-
 def main():
-    auto_aim = PoleAim(camno, weight, conf_thres, iou_thres, size, arduino_pin, servo_offset, trace)
+    auto_aim = PoleAim(CAM_ID, WEIGHT, CONF_THRES, IOU_THRES, SIZE, ARDUINO_PIN, SERVO_COM, SERVO_OFFSET, TRACE)
     auto_aim.run()
+
 
 if __name__ == '__main__':
     main()
