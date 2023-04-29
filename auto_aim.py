@@ -4,7 +4,7 @@ import time
 import cv2
 
 from detect_api import Detect
-from servo_arduino import Servo
+from servo import ArduinoServo
 from webcam import Webcam
 
 CAM_ID = 0
@@ -28,7 +28,7 @@ class PoleAim:
         self.img_size = img_size
         self.servo_offset = servo_offset
         self.servo_com = servo_com
-        self.servo: Servo
+        self.servo: ArduinoServo
         self.arduino_pin = arduino_pin
         self.servo_offset = servo_offset
         self.trace = trace
@@ -55,7 +55,7 @@ class PoleAim:
         self.webcam.cam_init()
 
     def servo_init(self):
-        self.servo = Servo(self.arduino_pin, self.servo_offset, self.servo_com)
+        self.servo = ArduinoServo(offset=self.servo_offset, pin=self.arduino_pin, com=self.servo_com)
 
     def detect_init(self):
         self.detect = Detect(self.weight, self.conf_thres, self.iou_thres, view_img=True, trace=self.trace)
