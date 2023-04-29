@@ -12,10 +12,12 @@ from utils.datasets import letterbox
 from utils.general import check_img_size, non_max_suppression, apply_classifier, \
     scale_coords, xyxy2xywh, strip_optimizer, set_logging, increment_path
 from utils.plots import plot_one_box
-from utils.torch_utils import select_device, time_synchronized, TracedModel
+from utils.torch_utils import select_device, TracedModel
+
 
 class Detect:
-    def __init__(self, weights, conf_thres=0.25, iou_thres=0.45, classes=None, device = "", view_img = False, save_dir=None, trace=True):
+    def __init__(self, weights, conf_thres=0.25, iou_thres=0.45, classes=None, device="", view_img=False, save_dir=None,
+                 trace=True):
         self.weights = weights
         self.save_dir = save_dir
         self.trace = trace
@@ -24,19 +26,18 @@ class Detect:
         self.stride = int(self.model.stride.max())  # model stride
         self.half = self.device.type != 'cpu'  # half precision only supported on CUDA
         self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms = conf_thres, iou_thres, classes, False
-        
+
         # Get names and colors
         self.names = self.model.module.names if hasattr(self.model, 'module') else self.model.names
         self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.names]
         # Second-stage classifier
-        #if classify:
+        # if classify:
         #    modelc = load_classifier(name='resnet101', n=2)  # initialize
         #    modelc.load_state_dict(torch.load('weights/resnet101.pt', map_location=device)['model']).to(device).eval()
-        #else:
+        # else:
         self.classify = False
         self.modelc = None
         self.view_img = view_img
-
 
     def init(self, weights, device):
         # Initialize
@@ -57,10 +58,11 @@ class Detect:
             self.model.half()  # to FP16
         # Run inference
         if self.device.type != 'cpu':
-            self.model(torch.zeros(1, 3, new_size, new_size).to(self.device).type_as(next(self.model.parameters())))  # run once
+            self.model(torch.zeros(1, 3, new_size, new_size).to(self.device).type_as(
+                next(self.model.parameters())))  # run once
 
-    def get_pt_cv_data(self, img0, img_size, img_return = False):
-        #print(f'image {self.count}/{self.nf} {path}: ', end='')
+    def get_pt_cv_data(self, img0, img_size, img_return=False):
+        # print(f'image {self.count}/{self.nf} {path}: ', end='')
 
         # Padded resize
         img = letterbox(img0, img_size, stride=self.stride)[0]
@@ -71,18 +73,17 @@ class Detect:
 
         return img
 
-
     def detect_image(self, im0s, imgsz, path=None):
         save = path != None
         img = self.get_pt_cv_data(im0s, imgsz)
-        #old_img_w = old_img_h = imgsz
-        #old_img_b = 1
+        # old_img_w = old_img_h = imgsz
+        # old_img_b = 1
         img = torch.from_numpy(img).to(self.device)
         img = img.half() if self.half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
-        #lag source
+        # lag source
         '''# Warmup 
         if self.device.type != 'cpu' and (old_img_b != img.shape[0] or old_img_h != img.shape[2] or old_img_w != img.shape[3]):
             old_img_b = img.shape[0]
@@ -92,13 +93,14 @@ class Detect:
                 self.model(img, augment=False)[0]'''
 
         # Inference
-        #t1 = time_synchronized()
+        # t1 = time_synchronized()
         pred = self.model(img, augment=False)[0]
-        #t2 = time_synchronized()
+        # t2 = time_synchronized()
 
         # Apply NMS
-        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
-        #t3 = time_synchronized()
+        pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, classes=self.classes,
+                                   agnostic=self.agnostic_nms)
+        # t3 = time_synchronized()
 
         # Apply Classifier
         if self.classify:
@@ -134,9 +136,9 @@ class Detect:
                     for j in range(1, 5):
                         cache_result.append(line[j])
                     cache_result.append(line[5].item())
-                    if line[0] != 0: #injected
+                    if line[0] != 1:  # injected
                         cache_result.append(cnt)
-                    #print(cache_result)
+                    # print(cache_result)
                     result.append(cache_result)
 
                     # Write to file
@@ -147,43 +149,37 @@ class Detect:
                     # Add bbox to image
                     if save or self.view_img:
                         add = ""
-                        if line[0] != 0:#injected
+                        if line[0] != 1:  # injected
                             add = str(cnt)
-                            cnt+=1
-                        label = f'{add }{self.names[int(cls)]} {conf:.2f}'
-                        if conf > 0.3:#todo fuck out this out of api
+                            cnt += 1
+                        label = f'{add}{self.names[int(cls)]} {conf:.2f}'
+                        if conf > 0.3:  # todo fuck out this out of api
                             plot_one_box(xyxy, im0, label=label, color=self.colors[int(cls)], line_thickness=1)
-                #print(result)
+                # print(result)
             # Print time (inference + NMS)
-            #print(f'{s}Done. ({(1E3 * (t2 - t1)):.1f}ms) Inference, ({(1E3 * (t3 - t2)):.1f}ms) NMS')
+            # print(f'{s}Done. ({(1E3 * (t2 - t1)):.1f}ms) Inference, ({(1E3 * (t3 - t2)):.1f}ms) NMS')
             # Stream results
-            if self.view_img:
-                cv2.imshow("live", im0)
-                if cv2.waitKey(1) == ord('q'):
-                    exit()
 
             # Save results (image with detections)
             if save:
                 cv2.imwrite(save_path, im0)
                 print(f" The image with the result is saved in: {save_path}")
-        return result
-
+        return result, im0
 
     def detect(self, source, imgsz, save_img=False):
-        #print(imgsz)
-        #webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
+        # print(imgsz)
+        # webcam = source.isnumeric() or source.endswith('.txt') or source.lower().startswith(
         #    ('rtsp://', 'rtmp://', 'http://', 'https://'))
 
-        self.init_size(imgsz)        
+        self.init_size(imgsz)
 
         # Set Dataloader
-        #dataset = LoadImages(source, img_size=imgsz, stride=self.stride)
+        # dataset = LoadImages(source, img_size=imgsz, stride=self.stride)
 
         t0 = time.time()
         import os
-        #for path, img, im0s, _ in dataset:
+        # for path, img, im0s, _ in dataset:
         for file in os.scandir(source):
-            
             # Read image
             im0s = cv2.imread(file.path)  # BGR
             print(self.detect_image(im0s, imgsz, file.path))
@@ -208,13 +204,14 @@ if __name__ == '__main__':
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     opt = parser.parse_args()
     import os, shutil
+
     for file in os.scandir("./runs/detect"):
         if file.name.startswith("test"):
             shutil.rmtree(file.path)
             print(f"removed {file.path}")
-    #check_requirements(exclude=('pycocotools', 'thop'))
+    # check_requirements(exclude=('pycocotools', 'thop'))
     # Directories
-    #print(opt.classes)
+    # print(opt.classes)
     save_dir = Path(increment_path(Path(opt.project) / opt.name, exist_ok=opt.exist_ok))  # increment run
     (save_dir / 'labels').mkdir(parents=True, exist_ok=True)  # make dir
     detect = Detect(opt.weights, opt.conf_thres, opt.iou_thres, opt.classes, device=opt.device, save_dir=save_dir)

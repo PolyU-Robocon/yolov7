@@ -13,8 +13,9 @@ CONF_THRES = 0.25
 IOU_THRES = 0.45
 SIZE = 736  # mul of 16
 ARDUINO_PIN = 9
-SERVO_OFFSET = 9
+SERVO_OFFSET = -13
 SERVO_COM = "/dev/ttyUSB0"
+SERVO_ratio = 5
 TRACE = True
 
 
@@ -32,7 +33,8 @@ class PoleAim:
         self.servo_offset = servo_offset
         self.trace = trace
         self.result = []
-        self.webcam = Webcam(width=1280, height=720)
+        self.webcam = Webcam(width=1280, height=720, k4a=True)
+        self.camera_width_angle = 113
         now = time.time()
 
         cam_thread = threading.Thread(target=self.camera_init)
@@ -60,8 +62,8 @@ class PoleAim:
         self.detect.init_size(self.img_size)
 
     def aim(self, target):
-        deg = (0.5 - target[1]) * 80
-        self.servo.move(deg)
+        deg = (0.5 - target[1]) * self.camera_width_angle
+        self.servo.move(-deg)# Reverse
         print(deg)
 
     def detecting(self):
@@ -70,8 +72,14 @@ class PoleAim:
         # start = time.time()
         while True:
             if not self.webcam.used:
-                frame = self.webcam.read()
-                self.result = self.detect.detect_image(frame, self.img_size)
+                frame, depth = self.webcam.read()
+                frame = cv2.rotate(frame, cv2.ROTATE_180)
+                self.result, img = self.detect.detect_image(frame, self.img_size)
+                mid = int(img.shape[1]/2)
+                img[:, mid] = [0, 0, 255]
+                cv2.imshow("live", img)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    break
                 # w, h, fps = self.webcam.get_wh_fps()
                 # used_time = time.time() - start
                 # fps_cal = round(1 / used_time, 5)
@@ -85,7 +93,7 @@ class PoleAim:
     def process(self, targets):
         print(targets)
         for i in list(targets):
-            if i[0] == 0:
+            if i[0] == 1:
                 targets.remove(i)
         return targets
 
@@ -100,9 +108,13 @@ class PoleAim:
                     if i[6] == a:
                         self.aim(i)
             except ValueError:
-                for i in targets:
-                    if i[0] == 0:
-                        self.aim(i)
+                if a.startswith("rescale"):
+                    args = a.split(" ")
+                    try:
+                        self.camera_width_angle = float(args[1])
+                        print(self.camera_width_angle)
+                    except Exception:
+                        pass
 
 
 def main():
