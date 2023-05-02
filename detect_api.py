@@ -16,7 +16,7 @@ from utils.torch_utils import select_device, TracedModel
 
 
 class Detect:
-    def __init__(self, weights, conf_thres=0.25, iou_thres=0.45, classes=None, device="", view_img=False, save_dir=None,
+    def __init__(self, weights, conf_thres=0.25, iou_thres=0.45, classes=None, device="", view_img=True, save_dir=None,
                  trace=True):
         self.weights = weights
         self.save_dir = save_dir

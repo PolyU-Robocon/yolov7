@@ -9,13 +9,13 @@ import detect_api
 from colorize import colorize
 from gui import GUI
 from webcam import Webcam
-
-DEBUG = False
-webcam = Webcam(width=1920, height=1080, k4a=True)
-fuck = 0
+from config import Config
 
 
-def camera_start():
+DEBUG = True
+
+
+def camera_start(webcam):
     webcam.cam_init()
 
 
@@ -101,18 +101,13 @@ def new_frame(img, depth, color_depth, result):
     return img
 
 
-def main(gui):
-    cam_thread = threading.Thread(target=camera_start, daemon=True)
+def main(gui, config: Config):
+    webcam = Webcam(config.cam_id, config.width, config.height, k4a=True)
+    cam_thread = threading.Thread(target=camera_start, args=(webcam, ), daemon=True)
     cam_thread.start()
     now = time.time()
-
-    weight = "runs/train/2.3k-1440-300-tiny/weights/best.pt"
-    conf_thres = 0.50
-    iou_thres = 0.45
-    size = 736
-    classes = None
-    detect = detect_api.Detect(weight, conf_thres, iou_thres, classes, view_img=True, trace=not DEBUG)
-    detect.init_size(size)
+    detect = detect_api.Detect(config.weight, config.conf_thres, config.iou_thres, trace=not DEBUG)
+    detect.init_size(config.img_size)
 
     cam_thread.join()
     webcam.start()
@@ -123,7 +118,7 @@ def main(gui):
         if not webcam.used:
             frame, depth = webcam.read()
             frame = cv2.rotate(frame, cv2.ROTATE_180)
-            result, img = detect.detect_image(frame, size)
+            result, img = detect.detect_image(frame, config.img_size)
             mid = int(img.shape[1] / 2)
             img[:, mid] = [0, 0, 255]
             cv2.imshow("live", img)
@@ -141,6 +136,8 @@ def main(gui):
 
 
 if __name__ == '__main__':
+    config = Config(path="config_windows.json")
+    config.init_config()
     gui = None#GUI()
-    threading.Thread(target=main, name="main", daemon=False, args=(gui,)).start()
+    threading.Thread(target=main, name="main", daemon=False, args=(gui, config)).start()
     #gui.start()

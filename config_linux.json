@@ -1,0 +1,17 @@
+{
+    "system": "linux",
+    "cam_id": 0,
+    "camera_width_angle": 113,
+    "width": 1280,
+    "height": 720,
+    "weight": "runs/train/11k-1440-300-tiny/weights/best.pt",
+    "k4a": true,
+    "conf_thres": 0.25,
+    "iou_thres": 0.45,
+    "img_size": 736,
+    "arduino_pin": 9,
+    "servo_offset": -13,
+    "servo_ratio": 5,
+    "servo_com": "/dev/ttyUSB0/",
+    "trace": true
+}

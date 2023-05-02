@@ -6,35 +6,28 @@ import cv2
 from detect_api import Detect
 from servo import ArduinoServo
 from webcam import Webcam
-
-CAM_ID = 0
-WEIGHT = "runs/train/11k-1440-300-tiny/weights/best.pt"
-CONF_THRES = 0.25
-IOU_THRES = 0.45
-SIZE = 736  # mul of 16
-ARDUINO_PIN = 9
-SERVO_OFFSET = -13
-SERVO_COM = "/dev/ttyUSB0"
-SERVO_ratio = 5
-TRACE = True
+from config import Config
 
 
 class PoleAim:
-    def __init__(self, cam_id, weight, conf_thres, iou_thres, img_size, arduino_pin, servo_com, servo_offset, trace):
-        self.cam_id = cam_id
-        self.weight = weight
-        self.conf_thres = conf_thres
-        self.iou_thres = iou_thres
-        self.img_size = img_size
-        self.servo_offset = servo_offset
-        self.servo_com = servo_com
+    def __init__(self, config: Config):
+        self.config = config
+        self.camera_width_angle = self.config.camera_width_angle
+        self.weight = self.config.weight
+        self.cam_id = self.config.cam_id
+        self.width = self.config.width
+        self.height = self.config.height
+        self.conf_thres = self.config.conf_thres
+        self.iou_thres = self.config.iou_thres
+        self.img_size = self.config.img_size
+        self.servo_offset = self.config.servo_offset
+        self.servo_com = self.config.servo_com
         self.servo: ArduinoServo
-        self.arduino_pin = arduino_pin
-        self.servo_offset = servo_offset
-        self.trace = trace
+        self.arduino_pin = self.config.arduino_pin
+        self.servo_offset = self.config.servo_offset
+        self.trace = self.config.trace
         self.result = []
-        self.webcam = Webcam(width=1280, height=720, k4a=True)
-        self.camera_width_angle = 113
+        self.webcam = Webcam(self.cam_id, self.width, self.height, k4a=True)
         now = time.time()
 
         cam_thread = threading.Thread(target=self.camera_init)
@@ -58,12 +51,12 @@ class PoleAim:
         self.servo = ArduinoServo(offset=self.servo_offset, pin=self.arduino_pin, com=self.servo_com)
 
     def detect_init(self):
-        self.detect = Detect(self.weight, self.conf_thres, self.iou_thres, view_img=True, trace=self.trace)
+        self.detect = Detect(self.weight, self.conf_thres, self.iou_thres, trace=self.trace)
         self.detect.init_size(self.img_size)
 
     def aim(self, target):
         deg = (0.5 - target[1]) * self.camera_width_angle
-        self.servo.move(-deg)# Reverse
+        self.servo.move(-deg)  # Reverse
         print(deg)
 
     def detecting(self):
@@ -75,7 +68,7 @@ class PoleAim:
                 frame, depth = self.webcam.read()
                 frame = cv2.rotate(frame, cv2.ROTATE_180)
                 self.result, img = self.detect.detect_image(frame, self.img_size)
-                mid = int(img.shape[1]/2)
+                mid = int(img.shape[1] / 2)
                 img[:, mid] = [0, 0, 255]
                 cv2.imshow("live", img)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -118,7 +111,9 @@ class PoleAim:
 
 
 def main():
-    auto_aim = PoleAim(CAM_ID, WEIGHT, CONF_THRES, IOU_THRES, SIZE, ARDUINO_PIN, SERVO_COM, SERVO_OFFSET, TRACE)
+    config = Config(path="config_windows.json")
+    config.init_config()
+    auto_aim = PoleAim(config)
     auto_aim.run()
 
 
