@@ -266,3 +266,5 @@ fabric.properties
 
 #robocon
 POLE*
+error_pole/
+testing.py
