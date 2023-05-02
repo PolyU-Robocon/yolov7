@@ -7,7 +7,7 @@ from scipy import stats
 
 import detect_api
 from colorize import colorize
-from gui import GUI
+# from gui import GUI
 from webcam import Webcam
 from config import Config
 
@@ -102,7 +102,7 @@ def new_frame(img, depth, color_depth, result):
 
 
 def main(gui, config: Config):
-    webcam = Webcam(config.cam_id, config.width, config.height, k4a=True)
+    webcam = Webcam(config.cam_id, config.width, config.height, k4a=config.k4a)
     cam_thread = threading.Thread(target=camera_start, args=(webcam, ), daemon=True)
     cam_thread.start()
     now = time.time()
@@ -121,6 +121,10 @@ def main(gui, config: Config):
             result, img = detect.detect_image(frame, config.img_size)
             mid = int(img.shape[1] / 2)
             img[:, mid] = [0, 0, 255]
+            mid = int(img.shape[1] / config.camera_width_angle * (config.camera_width_angle / 2 - 18))
+            img[:, mid] = [0, 255, 0]
+            mid = int(img.shape[1] / config.camera_width_angle * (config.camera_width_angle / 2 + 18))
+            img[:, mid] = [0, 255, 0]
             cv2.imshow("live", img)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
@@ -136,7 +140,7 @@ def main(gui, config: Config):
 
 
 if __name__ == '__main__':
-    config = Config(path="config_windows.json")
+    config = Config(path="config_linux.json")
     config.init_config()
     gui = None#GUI()
     threading.Thread(target=main, name="main", daemon=False, args=(gui, config)).start()

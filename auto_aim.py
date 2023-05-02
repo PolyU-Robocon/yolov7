@@ -27,7 +27,7 @@ class PoleAim:
         self.servo_offset = self.config.servo_offset
         self.trace = self.config.trace
         self.result = []
-        self.webcam = Webcam(self.cam_id, self.width, self.height, k4a=True)
+        self.webcam = Webcam(self.cam_id, self.width, self.height, k4a=self.config.k4a)
         now = time.time()
 
         cam_thread = threading.Thread(target=self.camera_init)
@@ -70,6 +70,10 @@ class PoleAim:
                 self.result, img = self.detect.detect_image(frame, self.img_size)
                 mid = int(img.shape[1] / 2)
                 img[:, mid] = [0, 0, 255]
+                mid = int(img.shape[1] / self.config.camera_width_angle * (self.config.camera_width_angle / 2 - 18))
+                img[:, mid] = [0, 255, 0]
+                mid = int(img.shape[1] / self.config.camera_width_angle * (self.config.camera_width_angle / 2 + 18))
+                img[:, mid] = [0, 255, 0]
                 cv2.imshow("live", img)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
@@ -111,7 +115,7 @@ class PoleAim:
 
 
 def main():
-    config = Config(path="config_windows.json")
+    config = Config(path="config_linux.json")
     config.init_config()
     auto_aim = PoleAim(config)
     auto_aim.run()

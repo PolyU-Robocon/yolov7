@@ -21,7 +21,7 @@ class Detect:
         self.weights = weights
         self.save_dir = save_dir
         self.trace = trace
-        self.save = False if self.save_dir == None else True
+        self.save = False if self.save_dir is None else True
         self.device, self.model = self.init(weights, device)
         self.stride = int(self.model.stride.max())  # model stride
         self.half = self.device.type != 'cpu'  # half precision only supported on CUDA

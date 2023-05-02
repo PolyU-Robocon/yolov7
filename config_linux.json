@@ -5,7 +5,7 @@
     "width": 1280,
     "height": 720,
     "weight": "runs/train/11k-1440-300-tiny/weights/best.pt",
-    "k4a": true,
+    "k4a": false,
     "conf_thres": 0.25,
     "iou_thres": 0.45,
     "img_size": 736,
