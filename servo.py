@@ -12,9 +12,10 @@ class ServoBase:
     def move(self, angle):
         angle = angle * self.gear_ratio
         self.deg_now = max(min(self.deg_now + angle, 180), 0)
-        self.__move()
+        print(f"current_angle:{self.deg_now}, input_angle{angle}")
+        self._move(self.deg_now)
 
-    def __move(self):
+    def _move(self, angle):
         pass
 
     def run(self):
@@ -38,10 +39,10 @@ class ArduinoServo(ServoBase):
         self.pin.write(self.deg_now)
         print(f"Servo Initialized at {com} PIN{pin}")
 
-    def __move(self):
-        self.pin.write(self.deg_now)
+    def _move(self, angle):
+        self.pin.write(angle)
 
 
 if __name__ == "__main__":
-    servo = Servo(com="COM18")
+    servo = ArduinoServo(com="COM18", gear_ratio=1)
     servo.run()
