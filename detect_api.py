@@ -105,7 +105,6 @@ class Detect:
         # Apply Classifier
         if self.classify:
             pred = apply_classifier(pred, self.modelc, img, im0s)
-
         p, s, im0 = path, '', im0s
         # Process detections
         result = []
@@ -124,9 +123,15 @@ class Detect:
                 for c in det[:, -1].unique():
                     n = (det[:, -1] == c).sum()  # detections per class
                     s += f"{n} {self.names[int(c)]}{'s' * (n > 1)}, "  # add to string
-
+                #print(det)
+                # for *xyxy, conf, cls in reversed(det):
+                #    print(*xyxy)
+                det = sorted(det, key=lambda x: x[0])
+                #for *xyxy, conf, cls in reversed(a):
+                #    print(*xyxy)
+                #print(a)
                 # Write results
-                for *xyxy, conf, cls in reversed(det):
+                for *xyxy, conf, cls in det:
                     cache_result = []
                     xywh = (xyxy2xywh(torch.tensor(xyxy).view(1, 4)) / gn).view(-1).tolist()  # normalized xywh
                     line = (cls, *xywh, conf)

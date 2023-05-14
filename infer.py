@@ -1,12 +1,17 @@
 import cv2
 import tensorrt as trt
+import time
 import torch
 import numpy as np
-from collections import OrderedDict,namedtuple
+from collections import OrderedDict, namedtuple
+from webcam import Webcam
 
-class TRT_engine():
+classes = ["pole", "disk"]
+
+
+class TRT_engine:
     def __init__(self, weight) -> None:
-        self.imgsz = [640,640]
+        self.imgsz = [640, 640]
         self.weight = weight
         self.device = torch.device('cuda:0')
         self.init_engine()
@@ -25,13 +30,14 @@ class TRT_engine():
             self.dtype = trt.nptype(self.model.get_binding_dtype(index))
             self.shape = tuple(self.model.get_binding_shape(index))
             self.data = torch.from_numpy(np.empty(self.shape, dtype=np.dtype(self.dtype))).to(self.device)
-            self.bindings[self.name] = self.Binding(self.name, self.dtype, self.shape, self.data, int(self.data.data_ptr()))
+            self.bindings[self.name] = self.Binding(self.name, self.dtype, self.shape, self.data,
+                                                    int(self.data.data_ptr()))
             if self.model.binding_is_input(index) and self.dtype == np.float16:
                 self.fp16 = True
         self.binding_addrs = OrderedDict((n, d.ptr) for n, d in self.bindings.items())
         self.context = self.model.create_execution_context()
 
-    def letterbox(self,im,color=(114, 114, 114), auto=False, scaleup=True, stride=32):
+    def letterbox(self, im, color=(114, 114, 114), auto=False, scaleup=True, stride=32):
         # Resize and pad image while meeting stride-multiple constraints
         shape = im.shape[:2]  # current shape [height, width]
         new_shape = self.imgsz
@@ -53,38 +59,40 @@ class TRT_engine():
         top, bottom = int(round(self.dh - 0.1)), int(round(self.dh + 0.1))
         left, right = int(round(self.dw - 0.1)), int(round(self.dw + 0.1))
         self.img = cv2.copyMakeBorder(im, top, bottom, left, right, cv2.BORDER_CONSTANT, value=color)  # add border
-        return self.img,self.r,self.dw,self.dh
+        return self.img, self.r, self.dw, self.dh
 
-    def preprocess(self,image):
-        self.img,self.r,self.dw,self.dh = self.letterbox(image)
+    def preprocess(self, image):
+        self.img, self.r, self.dw, self.dh = self.letterbox(image)
         self.img = self.img.transpose((2, 0, 1))
-        self.img = np.expand_dims(self.img,0)
+        self.img = np.expand_dims(self.img, 0)
         self.img = np.ascontiguousarray(self.img)
         self.img = torch.from_numpy(self.img).to(self.device)
         self.img = self.img.float()
         return self.img
 
-    def predict(self,img,threshold):
+    def predict(self, img, threshold):
         img = self.preprocess(img)
         self.binding_addrs['images'] = int(img.data_ptr())
         self.context.execute_v2(list(self.binding_addrs.values()))
         nums = self.bindings['num_dets'].data[0].tolist()
         boxes = self.bindings['det_boxes'].data[0].tolist()
-        scores =self.bindings['det_scores'].data[0].tolist()
+        scores = self.bindings['det_scores'].data[0].tolist()
         classes = self.bindings['det_classes'].data[0].tolist()
         num = int(nums[0])
         new_bboxes = []
         for i in range(num):
-            if(scores[i] < threshold):
+            if (scores[i] < threshold):
                 continue
-            xmin = (boxes[i][0] - self.dw)/self.r
-            ymin = (boxes[i][1] - self.dh)/self.r
-            xmax = (boxes[i][2] - self.dw)/self.r
-            ymax = (boxes[i][3] - self.dh)/self.r
-            new_bboxes.append([classes[i],scores[i],xmin,ymin,xmax,ymax])
+            xmin = (boxes[i][0] - self.dw) / self.r
+            ymin = (boxes[i][1] - self.dh) / self.r
+            xmax = (boxes[i][2] - self.dw) / self.r
+            ymax = (boxes[i][3] - self.dh) / self.r
+            new_bboxes.append([classes[i], scores[i], xmin, ymin, xmax, ymax])
         return new_bboxes
 
+
 def visualize(img, bbox_array):
+    cnt = 0
     for temp in bbox_array:
         xmin = int(temp[2])
         ymin = int(temp[3])
@@ -92,24 +100,33 @@ def visualize(img, bbox_array):
         ymax = int(temp[5])
         clas = int(temp[0])
         score = temp[1]
-        cv2.rectangle(img,(xmin,ymin),(xmax,ymax), (105, 237, 249), 2)
-        a = time.time()
-        img = cv2.putText(img, "class:"+str(clas)+" "+str(round(score,2)), (xmin,int(ymin)-5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (105, 237, 249), 1)
-        print(time.time() - a)
+        cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (105, 237, 249), 2)
+        cnt += 1
+        img = cv2.putText(img, classes[clas] + f"{cnt} " + str(round(score, 2)), (xmin, int(ymin) - 5),
+                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (105, 237, 249), 1)
     return img
 
-trt_engine = TRT_engine("./yolov7_fp16.engine")
-image = cv2.imread("./image/test.jpg")
+
+trt_engine = TRT_engine("./2.3k-1440-400-tiny.engine")
+webcam = Webcam()
+webcam.cam_init()
+webcam.start()
 cv2.namedWindow("img", cv2.WINDOW_NORMAL)
-import time
+
+start = time.time()
 while True:
-    start = time.time()
-    img = image.copy()
-    time1 = time.time()
-    results = trt_engine.predict(img,threshold=0.5)
-    time2 = time.time()
-    img = visualize(img, results)
-    time3 = time.time()
-    cv2.imshow("img",img)
-    cv2.waitKey(1)
-    print(f"fps: {round(1 / (time.time() - start), 5)} time:{round((time.time() - start) * 1000, 5)}ms, copy={round((time1 - start) * 1000, 5)}ms, pred={round((time2 - time1) * 1000, 5)}ms, visual={round((time3 - time2) * 1000, 5)}ms, show={round((time.time() - time3) * 1000, 5)}ms")
+    if not webcam.used:
+        img, _ = webcam.read()
+        time1 = time.time()
+        results = trt_engine.predict(img, threshold=0.5)
+        time2 = time.time()
+        img = visualize(img, results)
+        time3 = time.time()
+        cv2.imshow("img", img)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+        print(
+            f"fps: {round(1 / (time.time() - start), 5)} time:{round((time.time() - start) * 1000, 5)}ms, objects: {len(results)}, pred={round((time2 - time1) * 1000, 5)}ms, visual={round((time3 - time2) * 1000, 5)}ms, show={round((time.time() - time3) * 1000, 5)}ms")
+        start = time.time()
+    else:
+        time.sleep(0.00001)

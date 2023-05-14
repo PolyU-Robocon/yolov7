@@ -101,7 +101,7 @@ def new_frame(img, depth, color_depth, result):
     return img
 
 
-def main(gui, config: Config):
+def main(config: Config):
     webcam = Webcam(config.cam_id, config.width, config.height, k4a=config.k4a)
     cam_thread = threading.Thread(target=camera_start, args=(webcam, ), daemon=True)
     cam_thread.start()
@@ -117,7 +117,7 @@ def main(gui, config: Config):
     while True:
         if not webcam.used:
             frame, depth = webcam.read()
-            frame = cv2.rotate(frame, cv2.ROTATE_180)
+            #frame = cv2.rotate(frame, cv2.ROTATE_180)
             result, img = detect.detect_image(frame, config.img_size)
             mid = int(img.shape[1] / 2)
             img[:, mid] = [0, 0, 255]
@@ -142,6 +142,4 @@ def main(gui, config: Config):
 if __name__ == '__main__':
     config = Config(path="config_linux.json")
     config.init_config()
-    gui = None#GUI()
-    threading.Thread(target=main, name="main", daemon=False, args=(gui, config)).start()
-    #gui.start()
+    main(config)
