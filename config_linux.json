@@ -1,10 +1,12 @@
 {
     "system": "linux",
     "cam_id": 0,
-    "camera_width_angle": 113,
+    "camera_width_angle": 48,
     "width": 1280,
     "height": 720,
     "weight": "runs/train/11k-1440-300-tiny/weights/best.pt",
+    "tensorrt": true,
+    "tensorrt_weight": "2.3k-1440-400-tiny.engine",
     "k4a": false,
     "conf_thres": 0.25,
     "iou_thres": 0.45,
@@ -13,5 +15,6 @@
     "servo_offset": -13,
     "servo_ratio": 5,
     "servo_com": "/dev/ttyUSB0/",
-    "trace": true
+    "trace": true,
+    "size": 736
 }

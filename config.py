@@ -26,6 +26,8 @@ class Config:
         self.width = 1280
         self.height = 720
         self.weight = ""
+        self.tensorrt = False
+        self.tensorrt_weight = "2.3k-1440-400-tiny.engine"
         self.k4a = False
         self.conf_thres = 0.25
         self.iou_thres = 0.45
@@ -64,6 +66,8 @@ class Config:
         self.width = config_data["width"]
         self.height = config_data["height"]
         self.weight = config_data["weight"]
+        self.tensorrt = config_data["tensorrt"]
+        self.tensorrt_weight = config_data["tensorrt_weight"]
         self.k4a = config_data["k4a"]
         self.conf_thres = config_data["conf_thres"]
         self.iou_thres = config_data["iou_thres"]
