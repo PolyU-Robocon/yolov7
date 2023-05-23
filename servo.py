@@ -68,5 +68,5 @@ class ArduinoServo(ServoBase):
 
 
 if __name__ == "__main__":
-    servo = ArduinoServo(com="COM18", gear_ratio=1)
+    servo = ArduinoServo(com="COM15", gear_ratio=1)
     servo.run()

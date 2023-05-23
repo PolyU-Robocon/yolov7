@@ -187,7 +187,7 @@ class Detect:
         for file in os.scandir(source):
             # Read image
             im0s = cv2.imread(file.path)  # BGR
-            print(self.detect_image(im0s, imgsz, file.path))
+            self.detect_image(im0s, imgsz, file.path)
 
         print(f'Done. ({time.time() - t0:.3f}s)')
 
