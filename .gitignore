@@ -270,3 +270,4 @@ error_pole/
 testing.py
 !config_linux.json
 !config_windows.json
+test/
