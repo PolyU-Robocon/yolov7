@@ -1,5 +1,6 @@
 import cv2
 import tensorrt as trt
+import threading
 import time
 import torch
 import numpy as np
@@ -7,6 +8,39 @@ from collections import OrderedDict, namedtuple
 from webcam import Webcam
 
 classes = ["pole", "disk"]
+
+
+def plot_one_box(x, img, label):
+    # Plots one bounding box on image img
+    color = [0, 0, 255]
+    c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
+    cv2.rectangle(img, c1, c2, color, thickness=1, lineType=cv2.LINE_AA)
+    if label:
+        t_size = cv2.getTextSize(label, 0, fontScale=1 / 3, thickness=1)[0]
+        c2 = c1[0] + t_size[0], c1[1] - t_size[1] - 3
+        cv2.rectangle(img, c1, c2, color, -1, cv2.LINE_AA)  # filled
+        cv2.putText(img, label, (c1[0], c1[1] - 2), 0, 1 / 3, [225, 255, 255], thickness=1, lineType=cv2.LINE_AA)
+
+
+def visualize(img, bbox_array):
+    cnt = 0
+    results = []
+    for temp in bbox_array:
+        xmin = int(temp[1])
+        ymin = int(temp[2])
+        xmax = int(temp[3])
+        ymax = int(temp[4])
+        clas = int(temp[0])
+        score = temp[5]
+        cnt += 1
+        label = f"{cnt}-{classes[clas]} {str(round(score, 2))}"
+        plot_one_box([xmin, ymin, xmax, ymax], img, label)
+        temp[1] = (xmin + xmax) / 2 / img.shape[1]
+        temp[2] = (ymin + ymax) / 2 / img.shape[0]
+        temp[3] = xmax - xmin
+        temp[4] = ymax - ymin
+        results.append(temp)# xywh
+    return results, img
 
 
 class TRT_engine:
@@ -80,53 +114,55 @@ class TRT_engine:
         classes = self.bindings['det_classes'].data[0].tolist()
         num = int(nums[0])
         new_bboxes = []
+        cnt = 0
         for i in range(num):
-            if (scores[i] < threshold):
+            if scores[i] < threshold:
                 continue
             xmin = (boxes[i][0] - self.dw) / self.r
             ymin = (boxes[i][1] - self.dh) / self.r
             xmax = (boxes[i][2] - self.dw) / self.r
             ymax = (boxes[i][3] - self.dh) / self.r
-            new_bboxes.append([classes[i], scores[i], xmin, ymin, xmax, ymax])
+            if classes[i] == 0:
+                cnt += 1
+                new_bboxes.append([classes[i], xmin, ymin, xmax, ymax, scores[i], cnt])
+            else:
+                new_bboxes.append([classes[i], xmin, ymin, xmax, ymax, scores[i]])
+        new_bboxes = sorted(new_bboxes, key=lambda x: x[0])
         return new_bboxes
 
-
-def visualize(img, bbox_array):
-    cnt = 0
-    for temp in bbox_array:
-        xmin = int(temp[2])
-        ymin = int(temp[3])
-        xmax = int(temp[4])
-        ymax = int(temp[5])
-        clas = int(temp[0])
-        score = temp[1]
-        cv2.rectangle(img, (xmin, ymin), (xmax, ymax), (105, 237, 249), 2)
-        cnt += 1
-        img = cv2.putText(img, classes[clas] + f"{cnt} " + str(round(score, 2)), (xmin, int(ymin) - 5),
-                          cv2.FONT_HERSHEY_SIMPLEX, 0.5, (105, 237, 249), 1)
-    return img
+    def detect_image(self, img, size=0, threshold=0.5):
+        results = self.predict(img, threshold)
+        results, img = visualize(img, results)
+        return results, img
 
 
-trt_engine = TRT_engine("./2.3k-1440-400-tiny.engine")
-webcam = Webcam()
-webcam.cam_init()
-webcam.start()
-cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+def camera_start(webcam):
+    webcam.cam_init()
 
-start = time.time()
-while True:
-    if not webcam.used:
-        img, _ = webcam.read()
-        time1 = time.time()
-        results = trt_engine.predict(img, threshold=0.5)
-        time2 = time.time()
-        img = visualize(img, results)
-        time3 = time.time()
-        cv2.imshow("img", img)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-        print(
-            f"fps: {round(1 / (time.time() - start), 5)} time:{round((time.time() - start) * 1000, 5)}ms, objects: {len(results)}, pred={round((time2 - time1) * 1000, 5)}ms, visual={round((time3 - time2) * 1000, 5)}ms, show={round((time.time() - time3) * 1000, 5)}ms")
-        start = time.time()
-    else:
-        time.sleep(0.00001)
+
+if __name__ == "__main__":
+    webcam = Webcam()
+    cam_thread = threading.Thread(target=camera_start, args=(webcam,), daemon=True)
+    cam_thread.start()
+    trt_engine = TRT_engine("./2.3k-1440-400-tiny.engine")
+    cam_thread.join()
+    webcam.start()
+    cv2.namedWindow("img", cv2.WINDOW_NORMAL)
+
+    start = time.time()
+    while True:
+        if not webcam.used:
+            img, _ = webcam.read()
+            time1 = time.time()
+            results = trt_engine.predict(img, threshold=0.5)
+            time2 = time.time()
+            img = visualize(img, results)
+            time3 = time.time()
+            cv2.imshow("img", img)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+            print(
+                f"fps: {round(1 / (time.time() - start), 5)} time:{round((time.time() - start) * 1000, 5)}ms, objects: {len(results)}, pred={round((time2 - time1) * 1000, 5)}ms, visual={round((time3 - time2) * 1000, 5)}ms, show={round((time.time() - time3) * 1000, 5)}ms")
+            start = time.time()
+        else:
+            time.sleep(0.00001)

@@ -1,5 +1,6 @@
 import threading
 import time
+import tensorrt_api
 
 import cv2
 import numpy as np
@@ -106,12 +107,14 @@ def main(config: Config):
     cam_thread = threading.Thread(target=camera_start, args=(webcam, ), daemon=True)
     cam_thread.start()
     now = time.time()
-    detect = detect_api.Detect(config.weight, config.conf_thres, config.iou_thres, trace=not DEBUG)
-    detect.init_size(config.img_size)
-
+    if config.tensorrt:
+        detect = tensorrt_api.TRT_engine(config.tensorrt_weight)
+    else:
+        detect = detect_api.Detect(config.weight, config.conf_thres, config.iou_thres, trace=not DEBUG)
+        detect.init_size(config.img_size)
     cam_thread.join()
     webcam.start()
-    print(f"Initialized camera and Yolo v7 with {round((time.time() - now), 5)}s")
+    print(f"Initialized camera and Yolo v7 {'tensorrt' if config.tensorrt else ''} with {round((time.time() - now), 5)}s")
     cv2.namedWindow("live", cv2.WINDOW_NORMAL)
     start = time.time()
     while True:

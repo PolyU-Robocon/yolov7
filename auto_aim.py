@@ -4,6 +4,7 @@ import time
 import cv2
 
 from detect_api import Detect
+from tensorrt_api import TRT_engine
 from servo import ArduinoServo
 from webcam import Webcam
 from config import Config
@@ -30,9 +31,9 @@ class PoleAim:
         self.webcam = Webcam(self.cam_id, self.width, self.height, k4a=self.config.k4a)
         now = time.time()
 
-        cam_thread = threading.Thread(target=self.camera_init)
-        servo_thread = threading.Thread(target=self.servo_init)
-        detect_thread = threading.Thread(target=self.detect_init)
+        cam_thread = threading.Thread(target=self.camera_init, daemon=True)
+        servo_thread = threading.Thread(target=self.servo_init, daemon=True)
+        detect_thread = threading.Thread(target=self.detect_init, daemon=True)
 
         cam_thread.start()
         servo_thread.start()
@@ -51,8 +52,11 @@ class PoleAim:
         self.servo = ArduinoServo(offset=self.servo_offset, pin=self.arduino_pin, com=self.servo_com)
 
     def detect_init(self):
-        self.detect = Detect(self.weight, self.conf_thres, self.iou_thres, trace=self.trace)
-        self.detect.init_size(self.img_size)
+        if self.config.tensorrt:
+            self.detect = TRT_engine(self.config.tensorrt_weight)
+        else:
+            self.detect = detect_api.Detect(self.weight, self.conf_thres, self.iou_thres, trace=not DEBUG)
+            self.detect.init_size(self.img_size)
 
     def aim(self, target):
         deg = (0.5 - target[1]) * self.camera_width_angle
@@ -66,7 +70,7 @@ class PoleAim:
         while True:
             if not self.webcam.used:
                 frame, depth = self.webcam.read()
-                frame = cv2.rotate(frame, cv2.ROTATE_180)
+                #frame = cv2.rotate(frame, cv2.ROTATE_180)
                 self.result, img = self.detect.detect_image(frame, self.img_size)
                 mid = int(img.shape[1] / 2)
                 img[:, mid] = [0, 0, 255]
@@ -86,9 +90,10 @@ class PoleAim:
                 time.sleep(0.00001)
         self.webcam.cam.release()
         cv2.destroyAllWindows()
+        exit(0)
 
     def process(self, targets):
-        print(targets)
+        # print(targets)
         for i in list(targets):
             if i[0] == 1:
                 targets.remove(i)
