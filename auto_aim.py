@@ -59,8 +59,8 @@ class PoleAim:
             self.detect.init_size(self.img_size)
 
     def aim(self, target):
-        deg = (0.5 - target[1]) * self.camera_width_angle
-        self.servo.move(-deg)  # Reverse
+        deg = (target[1] - 0.5) * self.camera_width_angle
+        self.servo.move(deg)  # Reverse
         print(deg)
 
     def detecting(self):
@@ -117,6 +117,9 @@ class PoleAim:
                         print(self.camera_width_angle)
                     except Exception:
                         pass
+                if a.startswith("c"):
+                    self.servo.deg_now = 90 + self.servo.offset
+                    self.servo.move(0)
 
 
 def main():
