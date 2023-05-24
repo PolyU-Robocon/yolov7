@@ -1,0 +1,27 @@
+{
+    "cam_id": 0,
+    "camera_width_angle": 48,
+    "width": 1280,
+    "height": 720,
+    "weight": "runs/train/2.3k-1440-400-tiny/weights/best.pt",
+    "tensorrt": true,
+    "tensorrt_weight": "runs/train/2.3k-1440-400-tiny/weights/2.3k-1440-400-tiny.engine",
+    "k4a": false,
+    "ros": false,
+    "conf_thres": 0.25,
+    "iou_thres": 0.45,
+    "img_size": 736,
+    "arduino_pin": 9,
+    "servo_offset": 1,
+    "servo_ratio": 5,
+    "linux": {
+        "servo_com": "/dev/ttyUSB0"
+    },
+    "windows": {
+        "servo_com": "COM15"
+    },
+    "trace": true,
+    "size": 736,
+    "system": "linux",
+    "servo_com": "/dev/ttyUSB0/"
+}

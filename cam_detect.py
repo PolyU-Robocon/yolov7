@@ -143,6 +143,6 @@ def main(config: Config):
 
 
 if __name__ == '__main__':
-    config = Config(path="config_linux.json")
+    config = Config(path="config.json")
     config.init_config()
     main(config)

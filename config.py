@@ -1,5 +1,6 @@
 import json
 import os
+import platform
 
 
 DEFAULT_CONFIG = {
@@ -37,6 +38,7 @@ class Config:
         self.servo_ratio = 5
         self.servo_com = "COM18"
         self.trace = True
+        self.ros = False
 
     def load_config(self, path):
         sync = False
@@ -69,11 +71,16 @@ class Config:
         self.tensorrt = config_data["tensorrt"]
         self.tensorrt_weight = config_data["tensorrt_weight"]
         self.k4a = config_data["k4a"]
+        self.ros = config_data["ros"]
         self.conf_thres = config_data["conf_thres"]
         self.iou_thres = config_data["iou_thres"]
         self.img_size = config_data["size"]
         self.arduino_pin = config_data["arduino_pin"]
         self.servo_offset = config_data["servo_offset"]
         self.servo_ratio = config_data["servo_ratio"]
-        self.servo_com = config_data["servo_com"]
+        if platform.system() == "Windows":
+            self.servo_com = config_data["windows"]["servo_com"]
+        else:
+            self.servo_com = config_data["linux"]["servo_com"]
+        print(f"Using {platform.system()} as os")
         self.trace = config_data["trace"]
