@@ -31,9 +31,12 @@ def visualize(img, bbox_array):
         xmax = int(temp[3])
         ymax = int(temp[4])
         clas = int(temp[0])
+        label = ""
         score = temp[5]
-        cnt += 1
-        label = f"{cnt}-{classes[clas]} {str(round(score, 2))}"
+        if clas == 0:
+            cnt += 1
+            label += f"{cnt}-"
+        label += f"{classes[clas]} {str(round(score, 2))}"
         plot_one_box([xmin, ymin, xmax, ymax], img, label)
         temp[1] = (xmin + xmax) / 2 / img.shape[1]
         temp[2] = (ymin + ymax) / 2 / img.shape[0]
