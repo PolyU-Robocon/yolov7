@@ -34,14 +34,15 @@ try:
     from std_msgs.msg import Int16
 
     def talker():
-        rate = rospy.Rate(10) # 10hz
+        rate = rospy.Rate(10)  # 10hz
         while not rospy.is_shutdown():
             hello_str = "hello world %s" % rospy.get_time()
             rospy.loginfo(hello_str)
             pub.publish(hello_str)
             rate.sleep()
+
     class ROSServo(ServoBase):
-        def __init__(self, offset=-13, gear_ratio=5, pin=9, com='/dev/ttyUSB0'):
+        def __init__(self, offset=-13, gear_ratio=5):
             super().__init__(offset, gear_ratio)
             self.pub = rospy.Publisher('servo', Int16, queue_size=10)
             rospy.init_node('servo', anonymous=True)

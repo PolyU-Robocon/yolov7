@@ -5,7 +5,7 @@ import cv2
 
 from detect_api import Detect
 from tensorrt_api import TRT_engine
-from servo import ArduinoServo
+from servo import ArduinoServo, ServoBase
 from webcam import Webcam
 from config import Config
 
@@ -23,7 +23,7 @@ class PoleAim:
         self.img_size = self.config.img_size
         self.servo_offset = self.config.servo_offset
         self.servo_com = self.config.servo_com
-        self.servo: ArduinoServo
+        self.servo: ServoBase
         self.arduino_pin = self.config.arduino_pin
         self.servo_offset = self.config.servo_offset
         self.trace = self.config.trace
@@ -42,14 +42,19 @@ class PoleAim:
         cam_thread.join()
         servo_thread.join()
         detect_thread.join()
-
+        if self.config.ros:
+            self.init_listener()
         print(f"Initialized with {round((time.time() - now), 5)}s")
 
     def camera_init(self):
         self.webcam.cam_init()
 
     def servo_init(self):
-        self.servo = ArduinoServo(offset=self.servo_offset, pin=self.arduino_pin, com=self.servo_com)
+        if self.config.ros:
+            from servo import ROSServo
+            self.servo = ROSServo(self.servo_offset, self.config.servo_ratio)
+        else:
+            self.servo = ArduinoServo(self.servo_offset, self.config.servo_ratio, self.arduino_pin, self.servo_com)
 
     def detect_init(self):
         if self.config.tensorrt:
@@ -57,6 +62,19 @@ class PoleAim:
         else:
             self.detect = detect_api.Detect(self.weight, self.conf_thres, self.iou_thres, trace=not DEBUG)
             self.detect.init_size(self.img_size)
+
+    def listen(self, data):
+        pass
+
+    def init_listener(self):
+        pass
+        import rospy
+        from std_msgs.msg import Uint8
+        rospy.init_node('listener', anonymous=True)
+        rospy.Subscriber("chatter", Uint8, listen)
+
+    def callback(data):
+        rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
 
     def aim(self, target):
         deg = (target[1] - 0.5) * self.camera_width_angle
