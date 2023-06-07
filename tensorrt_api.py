@@ -130,7 +130,7 @@ class TRT_engine:
                 new_bboxes.append([classes[i], xmin, ymin, xmax, ymax, scores[i], cnt])
             else:
                 new_bboxes.append([classes[i], xmin, ymin, xmax, ymax, scores[i]])
-        new_bboxes = sorted(new_bboxes, key=lambda x: x[0])
+        new_bboxes = sorted(new_bboxes, key=lambda x: x[1])
         return new_bboxes
 
     def detect_image(self, img, size=0, threshold=0.5):
