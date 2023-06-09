@@ -10,9 +10,11 @@ from webcam import Webcam
 classes = ["pole", "disk"]
 
 
-def plot_one_box(x, img, label):
+def plot_one_box(x, img, label, now=False):
     # Plots one bounding box on image img
     color = [0, 0, 255]
+    if now:
+        color = [0, 255, 0]
     c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
     cv2.rectangle(img, c1, c2, color, thickness=1, lineType=cv2.LINE_AA)
     if label:
@@ -22,7 +24,7 @@ def plot_one_box(x, img, label):
         cv2.putText(img, label, (c1[0], c1[1] - 2), 0, 1 / 3, [225, 255, 255], thickness=1, lineType=cv2.LINE_AA)
 
 
-def visualize(img, bbox_array):
+def visualize(img, bbox_array, now):
     cnt = 0
     results = []
     for temp in bbox_array:
@@ -37,12 +39,15 @@ def visualize(img, bbox_array):
             cnt += 1
             label += f"{cnt}-"
         label += f"{classes[clas]} {str(round(score, 2))}"
-        plot_one_box([xmin, ymin, xmax, ymax], img, label)
+        if clas == 0 and cnt == now:
+            plot_one_box([xmin, ymin, xmax, ymax], img, label, True)
+        else:
+            plot_one_box([xmin, ymin, xmax, ymax], img, label)
         temp[1] = (xmin + xmax) / 2 / img.shape[1]
         temp[2] = (ymin + ymax) / 2 / img.shape[0]
         temp[3] = xmax - xmin
         temp[4] = ymax - ymin
-        results.append(temp)# xywh
+        results.append(temp)  # xywh
     return results, img
 
 
@@ -133,9 +138,12 @@ class TRT_engine:
         new_bboxes = sorted(new_bboxes, key=lambda x: x[1])
         return new_bboxes
 
-    def detect_image(self, img, size=0, threshold=0.5):
+    def detect_image(self, img, size=0, now=1, threshold=0.5):
         results = self.predict(img, threshold)
-        results, img = visualize(img, results)
+        #print(now)
+        if now == 0:
+            now = sorted(results, key=lambda i: abs((i[1] + i[3]) / 2 - 0.5))[0][6]
+        results, img = visualize(img, results, now)
         return results, img
 
 

@@ -12,6 +12,7 @@ from config import Config
 
 class PoleAim:
     def __init__(self, config: Config):
+        self.now = 1
         self.config = config
         self.camera_width_angle = self.config.camera_width_angle
         self.weight = self.config.weight
@@ -29,6 +30,7 @@ class PoleAim:
         self.trace = self.config.trace
         self.result = []
         self.webcam = Webcam(self.cam_id, self.width, self.height, k4a=self.config.k4a)
+        self.end = False
         now = time.time()
 
         cam_thread = threading.Thread(target=self.camera_init, daemon=True)
@@ -77,6 +79,7 @@ class PoleAim:
         rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
 
     def aim(self, target):
+        self.now = 0
         deg = (target[1] - 0.5) * self.camera_width_angle
         self.servo.move(deg)  # Reverse
         print(deg)
@@ -89,7 +92,7 @@ class PoleAim:
             if not self.webcam.used:
                 frame, depth = self.webcam.read()
                 #frame = cv2.rotate(frame, cv2.ROTATE_180)
-                self.result, img = self.detect.detect_image(frame, self.img_size)
+                self.result, img = self.detect.detect_image(frame, self.img_size, self.now)
                 mid = int(img.shape[1] / 2)
                 img[:, mid] = [0, 0, 255]
                 mid = int(img.shape[1] / self.config.camera_width_angle * (self.config.camera_width_angle / 2 - 18))
@@ -98,6 +101,7 @@ class PoleAim:
                 img[:, mid] = [0, 255, 0]
                 cv2.imshow("live", img)
                 if cv2.waitKey(1) & 0xFF == ord('q'):
+                    self.end = True
                     break
                 # w, h, fps = self.webcam.get_wh_fps()
                 # used_time = time.time() - start
@@ -119,7 +123,8 @@ class PoleAim:
 
     def run(self):
         threading.Thread(target=self.detecting, daemon=True).start()
-        while True:
+        while not self.end:
+            moved = False
             a = input()
             targets = self.process(self.result)
             try:
@@ -135,16 +140,34 @@ class PoleAim:
                         print(self.camera_width_angle)
                     except Exception:
                         pass
-                if a.startswith("c"):
+                elif a.startswith("c"):
                     self.servo.deg_now = 90 + self.servo.offset
                     self.servo.move(0)
+                elif a.startswith("l"):
+                    self.now -= 1
+                    moved = True
+                elif a.startswith("r"):
+                    self.now += 1
+                    moved = True
+                if moved:
+                    if self.now < 1:
+                        self.now = 1
+                    elif self.now > len(self.result):
+                        self.now = len(self.result)
+                    print(f"pole:  {self.now}")
 
 
 def main():
-    config = Config(path="config_linux.json")
+    config = Config(path="config.json")
     config.init_config()
     auto_aim = PoleAim(config)
-    auto_aim.run()
+    try:
+        auto_aim.run()
+    except Exception as e:
+        auto_aim.webcam.cam.release()
+        cv2.destroyAllWindows()
+        raise e
+    exit()
 
 
 if __name__ == '__main__':

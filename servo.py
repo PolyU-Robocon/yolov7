@@ -68,6 +68,8 @@ class ArduinoServo(ServoBase):
         self.pin.write(angle)
 
 
+
+
 if __name__ == "__main__":
     servo = ArduinoServo(com="COM15", gear_ratio=1)
     servo.run()

@@ -61,6 +61,8 @@ class Webcam:
                 self.frame = np.ascontiguousarray(cap.color[:,:,0:3])
                 self.depth = cap.transformed_depth
                 self.used = False
+        self.cam.release()
+        cv2.destroyAllWindows()
 
     def read(self):
         self.used = True

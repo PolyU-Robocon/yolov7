@@ -73,8 +73,8 @@ class Detect:
 
         return img
 
-    def detect_image(self, im0s, imgsz, path=None):
-        save = path != None
+    def detect_image(self, im0s, imgsz, now=0):
+        save = None is not None
         img = self.get_pt_cv_data(im0s, imgsz)
         # old_img_w = old_img_h = imgsz
         # old_img_b = 1
