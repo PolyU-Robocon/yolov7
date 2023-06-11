@@ -34,15 +34,15 @@ class PoleAim:
         now = time.time()
 
         cam_thread = threading.Thread(target=self.camera_init, name="cam_init", daemon=True)
-        servo_thread = threading.Thread(target=self.servo_init, name="servo_init", daemon=True)
+        # servo_thread = threading.Thread(target=self.servo_init, name="servo_init", daemon=True)
         detect_thread = threading.Thread(target=self.detect_init, name="detect_init", daemon=True)
 
         cam_thread.start()
-        servo_thread.start()
+        # servo_thread.start()
         detect_thread.start()
-
+        self.servo_init()
         cam_thread.join()
-        servo_thread.join()
+        # servo_thread.join()
         detect_thread.join()
         if self.config.ros:
             self.init_listener()
@@ -69,11 +69,11 @@ class PoleAim:
         pass
 
     def init_listener(self):
-        pass
+        return
         import rospy
-        from std_msgs.msg import Uint8
+        from std_msgs.msg import UInt8
         rospy.init_node('listener', anonymous=True)
-        rospy.Subscriber("chatter", Uint8, listen)
+        rospy.Subscriber("chatter", UInt8, listen)
 
     def callback(data):
         rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
@@ -89,11 +89,9 @@ class PoleAim:
         cv2.namedWindow("live", cv2.WINDOW_NORMAL)
         # start = time.time()
         while True:
-            self.webcam.used = False
             if not self.webcam.used:
                 frame, depth = self.webcam.read()
-                #frame = cv2.rotate(frame, cv2.ROTATE_180)
-                frame = cv2.imread("./test/images/05162023_161058_0.jpg")
+                # frame = cv2.rotate(frame, cv2.ROTATE_180)
                 self.result, img = self.detect.detect_image(frame, self.img_size, self.now)
                 mid = int(img.shape[1] / 2)
                 img[:, mid] = [0, 0, 255]
@@ -166,7 +164,8 @@ def main():
     config = Config(path="config.json")
     config.init_config()
     auto_aim = PoleAim(config)
-    from joymessage import InputJoyMessage
+    auto_aim.run()
+    from joymessage import RosJoyMessage
     inputmsg = InputJoyMessage(auto_aim)
     try:
         inputmsg.run()
