@@ -141,8 +141,12 @@ class TRT_engine:
     def detect_image(self, img, size=0, now=1, threshold=0.5):
         results = self.predict(img, threshold)
         #print(now)
+        used = []
+        for i in results:
+            if len(i) == 7:
+                used += i
         if now == 0:
-            now = sorted(results, key=lambda i: abs((i[1] + i[3]) / 2 - 0.5))[0][6]
+            now = sorted(used, key=lambda i: abs((i[1] + i[3]) / 2 - 0.5))[0][6]
         results, img = visualize(img, results, now)
         return results, img
 
