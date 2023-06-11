@@ -15,6 +15,11 @@ class ServoBase:
         print(f"current_angle:{self.deg_now}, input_angle{angle}")
         self._move(self.deg_now)
 
+    def step(self, angle):
+        self.deg_now = max(min(self.deg_now + angle, 180), 0)
+        print(f"current_angle:{self.deg_now}, input_angle{angle}")
+        self._move(self.deg_now)
+
     def _move(self, angle):
         pass
 

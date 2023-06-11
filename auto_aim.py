@@ -33,9 +33,9 @@ class PoleAim:
         self.end = False
         now = time.time()
 
-        cam_thread = threading.Thread(target=self.camera_init, daemon=True)
-        servo_thread = threading.Thread(target=self.servo_init, daemon=True)
-        detect_thread = threading.Thread(target=self.detect_init, daemon=True)
+        cam_thread = threading.Thread(target=self.camera_init, name="cam_init", daemon=True)
+        servo_thread = threading.Thread(target=self.servo_init, name="servo_init", daemon=True)
+        detect_thread = threading.Thread(target=self.detect_init, name="detect_init", daemon=True)
 
         cam_thread.start()
         servo_thread.start()
@@ -89,9 +89,11 @@ class PoleAim:
         cv2.namedWindow("live", cv2.WINDOW_NORMAL)
         # start = time.time()
         while True:
+            self.webcam.used = False
             if not self.webcam.used:
                 frame, depth = self.webcam.read()
                 #frame = cv2.rotate(frame, cv2.ROTATE_180)
+                frame = cv2.imread("./test/images/05162023_161058_0.jpg")
                 self.result, img = self.detect.detect_image(frame, self.img_size, self.now)
                 mid = int(img.shape[1] / 2)
                 img[:, mid] = [0, 0, 255]
@@ -121,10 +123,21 @@ class PoleAim:
                 targets.remove(i)
         return targets
 
+    def left(self):
+        self.now -= 1
+        if self.now < 1:
+            self.now = 1
+        print(f"pole:  {self.now}")
+
+    def right(self):
+        self.now += 1
+        if self.now > len(self.result):
+            self.now = len(self.result)
+        print(f"pole:  {self.now}")
+
     def run(self):
-        threading.Thread(target=self.detecting, daemon=True).start()
+        threading.Thread(target=self.detecting, name="detecting", daemon=True).start()
         while not self.end:
-            moved = False
             a = input()
             targets = self.process(self.result)
             try:
@@ -143,26 +156,20 @@ class PoleAim:
                 elif a.startswith("c"):
                     self.servo.deg_now = 90 + self.servo.offset
                     self.servo.move(0)
-                elif a.startswith("l"):
-                    self.now -= 1
-                    moved = True
                 elif a.startswith("r"):
-                    self.now += 1
-                    moved = True
-                if moved:
-                    if self.now < 1:
-                        self.now = 1
-                    elif self.now > len(self.result):
-                        self.now = len(self.result)
-                    print(f"pole:  {self.now}")
+                    self.left()
+                elif a.startswith("l"):
+                    self.right()
 
 
 def main():
     config = Config(path="config.json")
     config.init_config()
     auto_aim = PoleAim(config)
+    from joymessage import InputJoyMessage
+    inputmsg = InputJoyMessage(auto_aim)
     try:
-        auto_aim.run()
+        inputmsg.run()
     except Exception as e:
         auto_aim.webcam.cam.release()
         cv2.destroyAllWindows()

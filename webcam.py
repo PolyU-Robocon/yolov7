@@ -45,7 +45,7 @@ class Webcam:
 
     def start(self):
         self.stopped = False
-        threading.Thread(target=self.update, daemon=True).start()
+        threading.Thread(target=self.update, name="Webcam", daemon=True).start()
 
     def update(self):
         while not self.stopped:
