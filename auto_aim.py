@@ -129,8 +129,12 @@ class PoleAim:
 
     def right(self):
         self.now += 1
-        if self.now > len(self.result):
-            self.now = len(self.result)
+        cnt = 0
+        for i in self.result:
+            if len(i) == 7:
+                cnt += 1
+        if self.now > cnt:
+            self.now = cnt
         print(f"pole:  {self.now}")
 
     def run(self):
@@ -164,9 +168,8 @@ def main():
     config = Config(path="config.json")
     config.init_config()
     auto_aim = PoleAim(config)
-    auto_aim.run()
     from joymessage import RosJoyMessage
-    inputmsg = InputJoyMessage(auto_aim)
+    inputmsg = RosJoyMessage(auto_aim)
     try:
         inputmsg.run()
     except Exception as e:

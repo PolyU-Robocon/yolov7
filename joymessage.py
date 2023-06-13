@@ -22,7 +22,7 @@ mapping = {
 
 class JoyMessageBase:
     def __init__(self, aim: 'PoleAim'):
-        pass
+        self.aim = aim
 
     def A(self):
         targets = self.aim.process(self.aim.result)
@@ -32,16 +32,10 @@ class JoyMessageBase:
                 self.aim.aim(i)
 
     def LB(self):
-        self.aim.now -= 1
-        if self.aim.now < 1:
-            self.aim.now = 1
-        print(f"pole:  {self.aim.now}")
+        self.aim.left()
 
     def RB(self):
-        self.aim.now += 1
-        if self.aim.now > len(self.aim.result):
-            self.aim.now = len(self.aim.result)
-        print(f"pole:  {self.aim.now}")
+        self.aim.right()
 
     def test_left(self):
         print("test left")
@@ -60,9 +54,8 @@ class JoyMessageBase:
 
 
 class RosJoyMessage(JoyMessageBase):
-    def __init__(self):
-        super().__init__()
-        rospy.init_node('listener', anonymous=True)
+    def __init__(self, aim):
+        super().__init__(aim)
         rospy.Subscriber("joy", Joy, self.joy_message)
 
     def joy_message(self, data):
@@ -90,8 +83,7 @@ class RosJoyMessage(JoyMessageBase):
 
 class InputJoyMessage(JoyMessageBase):
     def __init__(self, aim: 'PoleAim'):
-        super().__init__()
-        self.aim = aim
+        super().__init__(aim)
 
     def run(self):
         threading.Thread(target=self.aim.detecting, name="detecting", daemon=True).start()

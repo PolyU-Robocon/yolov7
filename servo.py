@@ -50,7 +50,7 @@ try:
         def __init__(self, offset=-13, gear_ratio=5):
             super().__init__(offset, gear_ratio)
             self.pub = rospy.Publisher('servo', Int16, queue_size=10)
-            rospy.init_node('servo', anonymous=True)
+            rospy.init_node('yolo', anonymous=True)
             print(f"Servo Initialized with ROS node: 'servo'")
 
         def _move(self, angle):
