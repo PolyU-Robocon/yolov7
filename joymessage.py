@@ -13,8 +13,8 @@ mapping = {
     "A": 0,
     "left": 6,  # 1
     "right": 6,  # -1
-    "LB": 4,
-    "RB": 5,
+    "LB": 6,
+    "RB": 7,
     "test_left": 6,
     "test_right": 7,
 }
@@ -44,10 +44,12 @@ class JoyMessageBase:
         print("test right")
 
     def left(self):
-        self.aim.servo.step(1)
+        print("left")
+        self.aim.servo.step(-1)
 
     def right(self):
-        self.aim.servo.step(-1)
+        print("right")
+        self.aim.servo.step(1)
 
     def run(self):
         pass
@@ -57,7 +59,8 @@ class RosJoyMessage(JoyMessageBase):
     def __init__(self, aim):
         super().__init__(aim)
         rospy.Subscriber("joy", Joy, self.joy_message)
-
+        rospy.init_node('servo', anonymous=True)
+	
     def joy_message(self, data):
         # print(data.buttons)
         # print(data.axes)
@@ -67,10 +70,10 @@ class RosJoyMessage(JoyMessageBase):
             self.LB()
         if data.buttons[mapping["RB"]] == 1:
             self.RB()
-        if data.buttons[mapping["test_left"]] == 1:
-            self.test_left()
-        if data.buttons[mapping["test_right"]] == 1:
-            self.test_right()
+        #if data.buttons[mapping["test_left"]] == 1:
+        #    self.test_left()
+        #if data.buttons[mapping["test_right"]] == 1:
+        #    self.test_right()
         if data.axes[mapping["left"]] > 0:
             self.left()
         if data.axes[mapping["right"]] < 0:
@@ -100,5 +103,5 @@ class InputJoyMessage(JoyMessageBase):
 
 
 if __name__ == "__main__":
-    joy = RosJoyMessage()
+    joy = RosJoyMessage(None)
     joy.run()

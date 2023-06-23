@@ -36,7 +36,7 @@ class ServoBase:
 
 try:
     import rospy
-    from std_msgs.msg import Int16
+    from std_msgs.msg import UInt16
 
     def talker():
         rate = rospy.Rate(10)  # 10hz
@@ -49,12 +49,12 @@ try:
     class ROSServo(ServoBase):
         def __init__(self, offset=-13, gear_ratio=5):
             super().__init__(offset, gear_ratio)
-            self.pub = rospy.Publisher('servo', Int16, queue_size=10)
-            rospy.init_node('yolo', anonymous=True)
+            self.pub = rospy.Publisher('servo', UInt16, queue_size=10)
+            rospy.init_node('servo', anonymous=True)
             print(f"Servo Initialized with ROS node: 'servo'")
 
         def _move(self, angle):
-            self.pub.publish(angle)
+            self.pub.publish(int(angle))
 except ModuleNotFoundError:
     print("ROS not installed")
 
@@ -71,8 +71,6 @@ class ArduinoServo(ServoBase):
 
     def _move(self, angle):
         self.pin.write(angle)
-
-
 
 
 if __name__ == "__main__":

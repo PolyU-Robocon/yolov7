@@ -120,7 +120,6 @@ def main(config: Config):
     while True:
         if not webcam.used:
             frame, depth = webcam.read()
-            frame = cv2.imread("./test/images/05162023_161058_0.jpg")
             #frame = cv2.rotate(frame, cv2.ROTATE_180)
             result, img = detect.detect_image(frame, config.img_size)
             mid = int(img.shape[1] / 2)

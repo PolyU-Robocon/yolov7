@@ -144,9 +144,13 @@ class TRT_engine:
         used = []
         for i in results:
             if len(i) == 7:
-                used += i
-        if now == 0:
-            now = sorted(used, key=lambda i: abs((i[1] + i[3]) / 2 - 0.5))[0][6]
+                used.append(i)
+        if now == 0 and len(used) > 0:
+            print(abs((used[0][1] + used[0][3]) / 2 / img.shape[1] - 0.5))
+            print(used[0])
+            print(img.shape[1])
+            now = sorted(used, key=lambda i: abs((i[1] + i[3]) / 2 / img.shape[1] - 0.5))[0][6]
+            print(sorted(used, key=lambda i: abs((i[1] + i[3]) / 2 / img.shape[1] - 0.5)))
         results, img = visualize(img, results, now)
         return results, img
 
