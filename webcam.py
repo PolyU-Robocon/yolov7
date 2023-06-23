@@ -28,7 +28,7 @@ class Webcam:
             )
             self.cam.start()
         else:
-            self.cam = cv2.VideoCapture(self.id, cv2.CAP_DSHOW)
+            self.cam = cv2.VideoCapture(self.id)
             self.cam.set(cv2.CAP_PROP_FRAME_WIDTH, self.width)
             self.cam.set(cv2.CAP_PROP_FRAME_HEIGHT, self.height)
             self.cam.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*self.fourcc))
